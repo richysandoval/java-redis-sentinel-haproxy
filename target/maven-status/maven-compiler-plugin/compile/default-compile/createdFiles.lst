@@ -1,4 +1,0 @@
-com/example/redisdemo/model/Greeting.class
-com/example/redisdemo/config/RedisConfig.class
-com/example/redisdemo/controller/GreetingController.class
-com/example/redisdemo/RedisDemoApplication.class
