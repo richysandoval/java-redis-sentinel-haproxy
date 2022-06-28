@@ -1,0 +1,13 @@
+#spring:
+#  redis:
+#    url: redis-sentinel://localhost:26379/0#mymaster
+#    sentinel:
+#      master: mymaster
+#      nodes: localhost:26379
+spring:
+  redis:
+    sentinel:
+      master: docker-cluster
+      nodes: redis01:26379,redis02:26380,redis02:26381
+      #nodes: redis-sentinel:26379,redis2-sentinel:26380
+      #nodes: 10.103.50.114:26379,10.103.50.115:26379,10.103.50.116:26379

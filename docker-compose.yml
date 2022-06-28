@@ -1,48 +1,115 @@
 version: '3'
 
 services:
-  redis01:
+  ################## Cluster 1 ##################
+  cluster1-redis-master:
+    container_name: cluster1-redis-master
     build: ./redis
     ports:
       - 6379:6379
     networks:
-      - host
+      - redis-cluster
     env_file:
       - './redis/env/master_variables.env'
 
-  redis02:
+  cluster1-redis-sentinel:
+    container_name: cluster1-redis-sentinel
+    build: ./redis/sentinel
+    ports:
+      - 26379:26379
+    networks:
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
+    env_file:
+      - './redis/sentinel/sentinel_variables.env'
+
+  #################################################
+
+  ################## Cluster 2 ##################
+  cluster2-redis-slave:
+    container_name: cluster2-redis-slave
     build: ./redis
     ports:
       - 6380:6379
-    depends_on:
-      - redis01
     networks:
-      - host
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
     env_file:
       - './redis/env/slave_variables.env'
 
-  redis03:
+  cluster2-redis-sentinel:
+    container_name: cluster2-redis-sentinel
+    build: ./redis/sentinel
+    ports:
+      - 26380:26379
+    networks:
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
+    env_file:
+      - './redis/sentinel/sentinel_variables.env'
+
+  #################################################
+
+  ################## Cluster 3 ##################
+  cluster3-redis-slave:
+    container_name: cluster3-redis-slave
     build: ./redis
     ports:
       - 6381:6379
-    depends_on:
-      - redis01
     networks:
-      - host
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
     env_file:
       - './redis/env/slave_variables.env'
 
-  proxy:
-    build: ./haproxy
-    depends_on:
-      - redis01
-      - redis02
-      - redis03
-    networks:
-      - host
+  cluster3-redis-sentinel:
+    container_name: cluster3-redis-sentinel
+    build: ./redis/sentinel
     ports:
-      - '9000:9000'
-      - '8080:80'
+      - 26381:26379
+    networks:
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
+    env_file:
+      - './redis/sentinel/sentinel_variables.env'
+
+  #################################################
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    restart: always
+    environment:
+      - SENTINEL_PORT=26379
+      - SENTINEL_HOST=cluster1-redis-sentinel
+      - SENTINEL_NAME=redis-sentinel
+    ports:
+      - "8081:8081"
+    networks:
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
+      - cluster1-redis-sentinel
+
+  demo:
+    container_name: demo
+    build: .
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    environment:
+      - "JAVA_OPTS=${JAVA_ARGS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+    networks:
+      - redis-cluster
+    depends_on:
+      - cluster1-redis-master
+      - cluster1-redis-sentinel
 
 networks:
-  host:
+  redis-cluster:
